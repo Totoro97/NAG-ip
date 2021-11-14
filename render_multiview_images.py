@@ -43,7 +43,7 @@ if __name__ == '__main__':
     parser.add_argument('--ray_step_multiplier', type=int, default=2)
     parser.add_argument('--curriculum', type=str, default='CelebA')
     parser.add_argument('--range_u', type=float, default=0.3)
-    parser.add_argument('--n_samples', type=int, default=9)
+    parser.add_argument('--n_steps', type=int, default=9)
     parser.add_argument('--test_hold_out', type=int, default=2)
     opt = parser.parse_args()
 
@@ -67,7 +67,7 @@ if __name__ == '__main__':
     generator.set_device(device)
     generator.eval()
 
-    face_angles = np.linspace(-opt.range_u, opt.range_u, opt.n_samples) * -1
+    face_angles = np.linspace(-opt.range_u, opt.range_u, opt.n_steps) * -1
 
     face_angles = [a + curriculum['h_mean'] for a in face_angles]
 
