@@ -6,8 +6,12 @@ import sys
 import os
 import cv2 as cv
 import torch
+from siren import siren
+from generators import generators
 from torchvision.utils import save_image
 from tqdm import tqdm
+
+from torch_ema import ExponentialMovingAverage
 
 import curriculums
 
@@ -34,9 +38,9 @@ def generate_img(gen, z, **kwargs):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('path', type=str, default='../pretrained/ffhq/generator.pth')
+    parser.add_argument('path', type=str, default='./pretrained/afhq/generator.pth')
     parser.add_argument('--max_seed', type=int, default=1)
-    parser.add_argument('--output_dir', type=str, default='../ViewConsistencyEval/pi-GAN')
+    parser.add_argument('--output_dir', type=str, default='../ViewConsistencyEval/pi-GAN_afhq')
     parser.add_argument('--max_batch_size', type=int, default=2400000)
     parser.add_argument('--lock_view_dependence', action='store_true')
     parser.add_argument('--image_size', type=int, default=256)
@@ -60,9 +64,15 @@ if __name__ == '__main__':
     
     os.makedirs(opt.output_dir, exist_ok=True)
 
-    generator = torch.load(opt.path, map_location=torch.device(device))
+    metadata = curriculums.extract_metadata(curriculum, 0)
+    SIREN = getattr(siren, metadata['model'])
+    generator = getattr(generators, metadata['generator'])(SIREN, metadata['latent_dim']).to(device)
+    generator.load_state_dict(torch.load(opt.path, map_location=device))
+    # generator = torch.load(opt.path, map_location=torch.device(device))
     ema_file = opt.path.split('generator')[0] + 'ema.pth'
-    ema = torch.load(ema_file)
+
+    ema = ExponentialMovingAverage(generator.parameters(), decay=0.999)
+    ema.load_state_dict(torch.load(ema_file, map_location=device))
     ema.copy_to(generator.parameters())
     generator.set_device(device)
     generator.eval()
